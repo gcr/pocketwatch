@@ -154,6 +154,7 @@ if __name__ == '__main__':
     import AppKit
     info = AppKit.NSBundle.mainBundle().infoDictionary()
     info["LSBackgroundOnly"] = "1"
+    #info["LSUIElement"] = "1"
 
     app = QApplication(sys.argv)
     import AppKit
