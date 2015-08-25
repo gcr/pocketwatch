@@ -1,7 +1,7 @@
 #/usr/bin/env python
 
 from PyQt5.QtCore import QPoint, Qt, QTime, QTimer
-from PyQt5.QtGui import QColor, QPainter, QPolygon
+from PyQt5.QtGui import QColor, QPainter, QPolygon, QPalette
 from PyQt5.QtWidgets import QApplication, QWidget, QToolBox, QGraphicsView, QDialog
 
 # import ctypes
@@ -18,17 +18,20 @@ info["LSUIElement"] = "1"
 
 class OverlayGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
-        super(QGraphicsView, self).__init__(parent)
+        super(OverlayGraphicsView, self).__init__(parent)
         # Make this window an overlay.
-        self.setAttribute(#Qt.WA_TranslucentBackground |
+        self.setAttribute(Qt.WA_TranslucentBackground |
+                          #Qt.WA_TransparentForMouseEvents |
                           Qt.WA_MacAlwaysShowToolWindow
                          )
+        #self.setBackgroundRole(QPalette.NoRole)
         self.setWindowFlags(Qt.FramelessWindowHint |
                            Qt.WindowStaysOnTopHint |
                            Qt.Dialog
         )
+        self.cocoawin = None
     def show(self):
-        super(QGraphicsView, self).show()
+        super(OverlayGraphicsView, self).show()
 
         # Constants
         NSWindowCollectionBehaviorFullScreenPrimary = 128
@@ -49,6 +52,20 @@ class OverlayGraphicsView(QGraphicsView):
             NSWindowCollectionBehaviorCanJoinAllSpaces |
             NSWindowCollectionBehaviorStationary
         )
+        self.cocoawin = cocoawin
+
+    def paintEvent(self, evt):
+        super(OverlayGraphicsView, self).paintEvent(evt)
+
+    def setOSXDropShadow(self, has_shadow):
+        if self.cocoawin:
+            self.cocoawin.window().setHasShadow_(has_shadow)
+
+    def resetShadow(self, evt):
+        if self.cocoawin:
+            self.cocoawin.window().invalidateShadow()
+        #self.cocoawin.window().setHasShadow_(False)
+        #self.cocoawin.window().setHasShadow_(True)
 
 if __name__=="__main__":
     from PyQt5.QtWidgets import QApplication
