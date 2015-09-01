@@ -2,11 +2,15 @@
 import math
 from PyQt5.QtCore import (
     QEasingCurve,
-    QPoint, Qt, QTime, QTimer, QPropertyAnimation, QRect, pyqtProperty, QRectF, QPointF,
+    QPoint, Qt, QTime, QTimer, QPropertyAnimation, QRect, QRectF, QPointF,
+    QState, QStateMachine,
+    pyqtSignal, pyqtProperty,
     )
 from PyQt5.QtGui import QColor, QPainter, QPolygon, QPen, QBrush, QPalette
 from PyQt5.QtWidgets import QApplication, QWidget, QToolBox, QGraphicsView, QDialog, QGraphicsEllipseItem, QGraphicsScene, QGraphicsObject, QGraphicsDropShadowEffect
+
 from OverlayGraphicsView import OverlayGraphicsView
+from StateHelpers import make_state
 
 class QColorThemedGraphicsObject(QGraphicsObject):
     """
@@ -91,7 +95,7 @@ class ClockBack(QColorThemedGraphicsObject):
         self.bbox = QRectF(0, 0, self.size, self.size)
         self._color = QColor(255,0,0,255)
         self._alpha = 255
-        self._line_width = 4
+        self._line_width = 3
 
     def paint(self, painter, option, widget):
         # Draw background
@@ -112,15 +116,6 @@ class ClockBack(QColorThemedGraphicsObject):
         ))
         center = self.size/2
         painter.drawEllipse(self.bbox)
-        ## Draw white
-        #painter.setBrush(QColor(255,255,255, 0.8 * self._alpha))
-        #painter.setPen(QPen(self._color, self._line_width))
-        #RAD = 0.47
-        #painter.drawEllipse(QRectF(center - RAD*self.size,
-        #                           center - RAD*self.size,
-        #                           RAD*2*self.size,
-        #                           RAD*2*self.size))
-
         ## Draw four ticks along the sides
         #pen = QPen(QColor(self._color.red(),
         #                  self._color.green(),
@@ -162,13 +157,12 @@ class TimeElapsedView(QColorThemedGraphicsObject):
 
         # Recieve view updates from the Pomodoro Controller, horray~~
         self.pomodoro_control = pomodoro_control
-        self.pomodoro_control.each_second.connect(self.update_time)
+        self.pomodoro_control.time_update.connect(self.update_time)
 
-
-        ## Must repaint everything!
-        #self.timer = QTimer(self)
-        #self.timer.timeout.connect(self.update)
-        #self.timer.start(1000)
+        # Must periodically repaint everything!
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update)
+        self.timer.start(1000)
 
     def update_time(self, seconds_elapsed, seconds_remaining):
         self._seconds_elapsed = seconds_elapsed
@@ -186,16 +180,9 @@ class TimeElapsedView(QColorThemedGraphicsObject):
         time = QTime.currentTime()
         minuteNow = time.minute() + (time.second() / 60.0)
 
-        ## The following assumes that we are less than one hour away
-        ## from the starting time.
-        ## It's necessary to avoid bad wrap-around bugs.
-        #minuteNow = (minuteNow - self._minuteStart) % 60 + self._minuteStart
-        #minuteEnd = (self._minuteEnd - self._minuteStart) % 60 + self._minuteStart
         angleSecondsElapsed = 16*(360*self._seconds_elapsed / 60. / 60.)
         angleSecondsRemaining = 16*(360*self._seconds_remaining / 60. / 60.)
-        # theta1 = 16*(90 - 360 * self._minuteStart / 60.)
         thetaNow = 16*(90 - 360 * minuteNow / 60.)
-        # theta3 = 16*(90 - 360 * minuteEnd / 60.)
         PADDING = 0.5*self._thickness
 
         # Time left
@@ -260,9 +247,35 @@ class CircleObstruction(QColorThemedGraphicsObject):
             2*self._thickness,
             2*self._thickness,
         ))
+    def show_anim(self):
+        self.anim = QPropertyAnimation(self, "thickness")
+        self.anim.setDuration(2000)
+        self.anim.setStartValue(self.get_thickness())
+        self.anim.setEndValue(50.0)
+        self.anim.setEasingCurve(QEasingCurve.OutElastic)
+        self.anim.start()
+    def hide_anim(self):
+        self.anim = QPropertyAnimation(self, "thickness")
+        self.anim.setDuration(500)
+        self.anim.setStartValue(self.get_thickness())
+        self.anim.setEndValue(0.0)
+        self.anim.setEasingCurve(QEasingCurve.InBack)
+        self.anim.start()
 
 
-class PomodoroClockView(OverlayGraphicsView):
+
+
+class PomodoroClockView(OverlayGraphicsView, QColorThemedGraphicsObject):
+    pomodoro_begin_requested = pyqtSignal()
+    pomodoro_pause_requested = pyqtSignal()
+
+    def set_color(self, color):
+        super(PomodoroClockView, self).set_color(color)
+        self.hour_hand.set_color(self._color)
+        self.minute_hand.set_color(self._color)
+        self.clock_back.set_color(self._color)
+        self.time_elapsed_view.set_color(self._color)
+        self.obstruction.set_color(self._color)
 
     def __init__(self, pomodoro_control, parent=None):
         super(PomodoroClockView, self).__init__(parent)
@@ -274,49 +287,70 @@ class PomodoroClockView(OverlayGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setStyleSheet("background: transparent")
         self.setRenderHint(QPainter.Antialiasing)
-        #self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-
-        #self.setAttribute(Qt.WA_MouseNoMask)
-
-        # Nice drop shadow (may need to tweak?)
-        #effect = QGraphicsDropShadowEffect()
-        #effect.setColor(QColor(0,0,0, 8))
-        #effect.setBlurRadius(8)
-        #effect.setOffset(2)
-        #self.setGraphicsEffect(effect)
-
 
         # A scene containing all the parts of the clock
         scene = QGraphicsScene()
         self.setScene(scene)
-        # self.setBackgroundBrush(QBrush(Qt.transparent))
         self.clock_back = ClockBack(100)
-        scene.addItem(self.clock_back)
-        # self.xxx = ClockHandShape(50, 50, 25, 1.3)
-        # scene.addItem(self.xxx)
         self.hour_hand = SynchronizedClockHand("hour", 50, 50, 37*0.66, 2.3)
         self.minute_hand = SynchronizedClockHand("minute", 50, 50, 37, 2)
-        #self.second_hand = SynchronizedClockHand("second", 50, 50, 45, 0.5)
+        self.time_elapsed_view = TimeElapsedView(100, 15, self.pomodoro_control)
+        self.obstruction = CircleObstruction(100, 0)
+        scene.addItem(self.clock_back)
         scene.addItem(self.hour_hand)
         scene.addItem(self.minute_hand)
-        #scene.addItem(self.second_hand)
-
-        self.time_elapsed_view = TimeElapsedView(100, 15, self.pomodoro_control)
         scene.addItem(self.time_elapsed_view)
-
-        self.obstruction = CircleObstruction(100, 0)
         scene.addItem(self.obstruction)
+        self.set_color(QColor(0,0,0))
 
-        # Experimenting with colors
-        color = QColor(203,73,5)
-        self.hour_hand.set_color(color)
-        self.minute_hand.set_color(color)
-        self.clock_back.set_color(color)
-        self.time_elapsed_view.set_color(color)
-        self.obstruction.set_color(color)
 
-        self.clock_back.set_alpha(255)
-        self.clock_back.set_line_width(3)
+        """
+        Turns out I can't use a QStateMachine.
+        Why?
+        - I want this class to be *completely* subservient to the internal state
+          of the PomodoroControl. When that changes its state, this class
+          *reacts* to that change.
+        - QStateMachine runs in its own event loop, which does not start until after
+          the app's event loop runs. The state machine will refuse to catch signals
+          until the app is already running. This means that *this class* must know
+          whether it's starting at a started or stopped state.
+        """
+        self.pomodoro_control.pomodoro_begin.connect(self.pomodoro_begin)
+        self.pomodoro_control.pomodoro_complete.connect(self.pomodoro_complete)
+        if self.pomodoro_control.is_running:
+            self.pomodoro_begin()
+        else:
+            self.pomodoro_complete()
+
+    def pomodoro_begin(self):
+        """
+        Animation for beginning a pomodoro.
+        """
+        self.obstruction.hide_anim()
+    def pomodoro_complete(self):
+        """
+        Animation for completing a pomodoro.
+        """
+        self.obstruction.show_anim()
+
+        # def pp(x): print x
+        # self.pomodoro_control.pomodoro_begin.connect(lambda: pp("Pomodoro is actually beginning."))
+        # self.stopped_state.entered.connect(lambda: pp("STOPPED"))
+        # self.running_state.entered.connect(lambda: pp("RUNNING"))
+
+        # self.wait_for_start_state = QState()
+
+        # self.wait_for_start_state.addTransition(self.pomodoro_control.pomodoro_begin,
+        #                                         self.running_state)
+        # self.running_state.addTransition(self.pomodoro_control.pomodoro_complete,
+        #                                  self.wait_for_start_state)
+        # self.wait_for_start_state.addTransition(
+        #     self.mousePressEvent,
+        #     self.pomodoro_begin_requested)
+        # self.running_state.addTransition(
+        #     self.mousePressEvent,
+        #     self.pomodoro_pause_requested)
+
         #self.anim = QPropertyAnimation(self.obstruction, "thickness")
         #self.anim.setDuration(2000)
         #self.anim.setStartValue(0.0)
@@ -336,34 +370,31 @@ class PomodoroClockView(OverlayGraphicsView):
         #self.anim3.setEasingCurve(QEasingCurve.OutBounce)
         #self.anim3.start()
 
+
     def resizeEvent(self, evt):
         #super(PomodoroClockView, self).resize(w, h)
         w = evt.size().width()
         h = evt.size().height()
         # Transformation: let's let (50, 50) be the center and range from [0,100].
         self.fitInView(QRectF(-10, -10, 120, 120))
-        #self.translate
-
-    def drawBackground(self, painter, rect):
-        """WORKAROUND: Since this widget has a transparent background, Qt's
-        default blending mode will draw "transparency" over the
-        previous pixel state. When we want to clear the widget over
-        every frame, nothing happens. This is a terrible hack around
-        that.
-
-        """
-        painter.setCompositionMode(QPainter.CompositionMode_Clear)
-        painter.fillRect(rect, Qt.transparent)
-        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        self.setSceneRect(QRectF(0, 0, 100, 100))
 
     def mousePressEvent(self, evt):
         """
         Users can move the clock by dragging it aruond.
         """
+        self.is_dragging = False
         if evt.button() == Qt.LeftButton:
             self.dragPosition = evt.globalPos() - self.frameGeometry().topLeft()
             evt.accept()
     def mouseMoveEvent(self, evt):
+        self.is_dragging = True
         if Qt.LeftButton & evt.buttons():
             self.move(evt.globalPos() - self.dragPosition)
             evt.accept()
+    def mouseReleaseEvent(self, evt):
+        if not self.is_dragging:
+            if self.pomodoro_control.is_running:
+                self.pomodoro_pause_requested.emit()
+            else:
+                self.pomodoro_begin_requested.emit()

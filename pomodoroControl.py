@@ -10,7 +10,7 @@ class PomodoroControl(QObject):
     """
     pomodoro_begin = pyqtSignal()
     pomodoro_complete = pyqtSignal()
-    each_second = pyqtSignal([float, float])
+    time_update = pyqtSignal([float, float])
     # signal: number of seconds elapsed, number of seconds remaining
     def __init__(self, parent=None):
         super(PomodoroControl, self).__init__(parent)
@@ -28,12 +28,16 @@ class PomodoroControl(QObject):
         self.seconds_elapsed = 0
         self.timer.start(1000)
         self.pomodoro_begin.emit()
+        self.time_update.emit(self.seconds_elapsed, self.seconds_remaining)
+
+    def early_finish(self):
+        self.timer.stop()
+        self.pomodoro_complete.emit()
 
     def handle_second(self):
-        print "HANDLE SECOND"
         self.seconds_elapsed += 1
         self.seconds_remaining -= 1
-        self.each_second.emit(self.seconds_elapsed, self.seconds_remaining)
+        self.time_update.emit(self.seconds_elapsed, self.seconds_remaining)
         if self.seconds_remaining == 0:
             self.timer.stop()
             self.pomodoro_complete.emit()
@@ -53,7 +57,7 @@ if __name__=="__main__":
         ctl.start(5)
     ctl.pomodoro_begin.connect(begin)
     ctl.pomodoro_complete.connect(complete)
-    ctl.each_second.connect(each_sec)
+    ctl.time_update.connect(each_sec)
 
     ctl.start(10)
 

@@ -67,6 +67,18 @@ class OverlayGraphicsView(QGraphicsView):
         #self.cocoawin.window().setHasShadow_(False)
         #self.cocoawin.window().setHasShadow_(True)
 
+    def drawBackground(self, painter, rect):
+        """WORKAROUND: Since this widget has a transparent background, Qt's
+        default blending mode will draw "transparency" over the
+        previous pixel state. When we want to clear the widget over
+        every frame, nothing happens. This is a terrible hack around
+        that.
+        """
+        painter.setCompositionMode(QPainter.CompositionMode_Clear)
+        painter.fillRect(rect, Qt.transparent)
+        painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+
+
 if __name__=="__main__":
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
