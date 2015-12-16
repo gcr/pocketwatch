@@ -11,25 +11,51 @@ overlay = PomodoroClockView(ctl)
 overlay.resize(150,150)
 overlay.show()
 
+def to_color(color):
+    c = int(color, 16)
+    return QColor(c >> 16 & 0xff,
+                  c >> 8  & 0xff,
+                  c       & 0xff)
+
+def brighten(color):
+    return QColor(int(color.red() * 0.75 + 64),
+                  int(color.green() * 0.75 + 64),
+                  int(color.blue() * 0.75 + 64))
+
 # Experimenting with colors
 # some good ones:
 # http://www.colourlovers.com/palette/92095/Giant_Goldfish
 # ???
 # http://www.colourlovers.com/palette/577622/One_Sixty-Eight_%E2%98%86
-COLORS = [QColor(94,159,163),
-          QColor(220,209,180),
-          QColor(250,184,127),
-          QColor(248,126,123),
-          QColor(176,85,116),
-          ]
+# COLORS = [QColor(94,159,163),
+#           QColor(220,209,180),
+#           QColor(250,184,127),
+#           QColor(248,126,123),
+#           QColor(176,85,116),
+#           ]
 # http://www.colourlovers.com/palette/110225/Vintage_Modern
 # I really, really like this one.
-COLORS = [QColor(140,35,24),
-          QColor(94,140,106),
-          QColor(136,166,94),
-          QColor(191,179,90),
-          QColor(242,196,90),
-          ]
+#COLORS = [QColor(140,35,24),
+#            brighten(QColor(140,35,24)),
+#          QColor(94,140,106),
+#            brighten(QColor(94,140,106)),
+#          QColor(136,166,94),
+#            brighten(QColor(136,166,94)),
+#          QColor(191,179,90),
+#            brighten(QColor(191,179,90)),
+#          #QColor(242,196,90),
+#          ]
+# Tomorrow theme, https://github.com/chriskempson/tomorrow-theme
+COLORS = map(to_color, ["c82829",
+                        "f5871f",
+                        "eab700",
+                        "718c00",
+                        "3e999f",
+                        "4271ae",
+                        "8959a8",
+                        "4d4d4c",
+                        ])
+
 # http://www.colourlovers.com/palette/845564/its_raining_love
 # This one is also pretty good too.
 # COLORS = [QColor(163, 169, 72),
@@ -39,16 +65,16 @@ COLORS = [QColor(140,35,24),
 #           QColor(0, 153, 137),
 #           ]
 # http://www.colourlovers.com/palette/1811244/1001_Stories
-COLORS = [QColor(248,177,149),
-          QColor(246,114,128),
-          QColor(192,108,132),
-          QColor(108,91,123),
-          QColor(53,92,125),
-          # my own additions, mixing in Vintage Modern: :)
-          QColor(94,140,106),
-          QColor(136,166,94),
-          QColor(242,196,90),
-          ]
+# COLORS = [QColor(248,177,149),
+#           QColor(246,114,128),
+#           QColor(192,108,132),
+#           QColor(108,91,123),
+#           QColor(53,92,125),
+#           # my own additions, mixing in Vintage Modern: :)
+#           QColor(94,140,106),
+#           QColor(136,166,94),
+#           QColor(242,196,90),
+#           ]
 # http://www.colourlovers.com/palette/772970/200fruits_of_passion
 # COLORS = [QColor(181,172,1),
 #           QColor(236,186,9),
