@@ -10,7 +10,6 @@ from PyQt5.QtGui import QColor, QPainter, QPolygon, QPen, QBrush, QPalette
 from PyQt5.QtWidgets import QApplication, QWidget, QToolBox, QGraphicsView, QDialog, QGraphicsEllipseItem, QGraphicsScene, QGraphicsObject, QGraphicsDropShadowEffect
 
 from OverlayGraphicsView import OverlayGraphicsView
-from StateHelpers import make_state
 
 class QColorThemedGraphicsObject(QGraphicsObject):
     """
