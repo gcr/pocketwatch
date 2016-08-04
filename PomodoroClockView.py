@@ -88,19 +88,23 @@ class ClockBack(QColorThemedGraphicsObject):
         self.update()
     line_width = pyqtProperty(float, get_line_width, set_line_width)
 
+    def set_outline_color(self, outline_color):
+        self._outline_color = outline_color
+
     def __init__(self, size, *args, **kw):
         super(ClockBack,self).__init__(*args, **kw)
         self.size = size
         self.bbox = QRectF(0, 0, self.size, self.size)
         self._color = QColor(255,0,0,255)
+        self._outline_color = QColor(255,0,0,255)
         self._alpha = 255
         self._line_width = 3
 
     def paint(self, painter, option, widget):
         # Draw background
-        painter.setPen(QPen(QColor(self._color.red(),
-                                   self._color.green(),
-                                   self._color.blue(),
+        painter.setPen(QPen(QColor(self._outline_color.red(),
+                                   self._outline_color.green(),
+                                   self._outline_color.blue(),
                                    0.5*255 + 0.5*self._alpha
         ), self._line_width))
         # How much white to mix in?
@@ -268,11 +272,12 @@ class PomodoroClockView(OverlayGraphicsView, QColorThemedGraphicsObject):
     pomodoro_begin_requested = pyqtSignal()
     pomodoro_pause_requested = pyqtSignal()
 
-    def set_color(self, color):
+    def set_color(self, color, outline_color):
         super(PomodoroClockView, self).set_color(color)
-        self.hour_hand.set_color(self._color)
-        self.minute_hand.set_color(self._color)
+        self.hour_hand.set_color(outline_color)
+        self.minute_hand.set_color(outline_color)
         self.clock_back.set_color(self._color)
+        self.clock_back.set_outline_color(outline_color)
         self.time_elapsed_view.set_color(self._color)
         self.obstruction.set_color(self._color)
 
@@ -300,7 +305,7 @@ class PomodoroClockView(OverlayGraphicsView, QColorThemedGraphicsObject):
         scene.addItem(self.minute_hand)
         scene.addItem(self.time_elapsed_view)
         scene.addItem(self.obstruction)
-        self.set_color(QColor(0,0,0))
+        self.set_color(QColor(0,0,0), QColor(0,0,0))
 
 
         """

@@ -55,6 +55,7 @@ COLORS = map(to_color, ["c82829",
                         "8959a8",
                         "4d4d4c",
                         ])
+OUTLINE_COLOR = to_color("4d4d4c")
 
 # http://www.colourlovers.com/palette/845564/its_raining_love
 # This one is also pretty good too.
@@ -95,7 +96,7 @@ MINUTES = [25, 5, 25, 5, 25, 5, 25, 15]
 def next_color():
     color = COLORS.pop(0)
     COLORS.append(color)
-    overlay.set_color(color)
+    overlay.set_color(color, OUTLINE_COLOR)
 def next_pomodoro():
     time = MINUTES.pop(0)
     MINUTES.append(time)
